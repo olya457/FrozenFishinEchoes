@@ -1,4 +1,4 @@
-package com.frozenfishinechoes
+package com.frozen.fishin.echoes
 
 import android.app.Application
 import com.facebook.react.PackageList

@@ -1,4 +1,4 @@
-package com.frozenfishinechoes
+package com.frozen.fishin.echoes
 
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
