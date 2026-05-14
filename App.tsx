@@ -172,7 +172,7 @@ function App(): React.JSX.Element {
       case 'stories':
         return <StoriesScreen onOpenStory={openStory} />;
       case 'quiz':
-        return <QuizScreen />;
+        return <QuizScreen onExplore={() => navigateTab('explore')} />;
       case 'saved':
         return (
           <SavedScreen
@@ -210,7 +210,12 @@ function App(): React.JSX.Element {
         );
       case 'explore':
       default:
-        return <ExploreScreen onOpenLocation={openLocation} />;
+        return (
+          <ExploreScreen
+            onOpenLocation={openLocation}
+            onSeeAllLocations={() => navigateTab('map')}
+          />
+        );
     }
   })();
 

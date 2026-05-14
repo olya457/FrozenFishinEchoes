@@ -7,7 +7,11 @@ import {palette} from '../theme';
 
 type Stage = 'intro' | 'question' | 'result';
 
-export function QuizScreen() {
+type Props = {
+  onExplore: () => void;
+};
+
+export function QuizScreen({onExplore}: Props) {
   const [stage, setStage] = useState<Stage>('intro');
   const [setIndex, setSetIndex] = useState(0);
   const [questionIndex, setQuestionIndex] = useState(0);
@@ -74,12 +78,13 @@ export function QuizScreen() {
     setSelectedIndex(null);
   };
 
-  const resetToFirstPage = () => {
+  const explore = () => {
     setSetIndex(0);
     setStage('intro');
     setScore(0);
     setQuestionIndex(0);
     setSelectedIndex(null);
+    onExplore();
   };
 
   if (stage === 'intro') {
@@ -134,7 +139,7 @@ export function QuizScreen() {
           <Pressable onPress={tryAgain} style={styles.secondaryButton}>
             <Text style={styles.secondaryText}>Try Again</Text>
           </Pressable>
-          <Pressable onPress={resetToFirstPage} style={styles.primaryButton}>
+          <Pressable onPress={explore} style={styles.primaryButton}>
             <Text style={styles.primaryText}>Explore</Text>
           </Pressable>
         </View>

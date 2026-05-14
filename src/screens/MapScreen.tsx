@@ -40,6 +40,9 @@ const initialRegion: Region = {
   longitudeDelta: 285,
 };
 
+const controlColumnWidth = 42;
+const controlColumnGap = 14;
+
 const darkMapStyle = [
   {
     elementType: 'geometry',
@@ -85,6 +88,7 @@ export function MapScreen({onOpenLocation}: Props) {
   const [region, setRegion] = useState<Region>(initialRegion);
   const [expanded, setExpanded] = useState(metrics.height >= 760);
   const sheetHeight = expanded ? (metrics.height < 760 ? 292 : 350) : 132;
+  const controlReserve = controlColumnWidth + controlColumnGap;
   const selected =
     locations.find(item => item.id === selectedId) ?? locations[0];
   const orderedLocations = useMemo(
@@ -216,7 +220,11 @@ export function MapScreen({onOpenLocation}: Props) {
         <View
           style={[
             styles.selectedCard,
-            {left: metrics.pad, right: metrics.pad, bottom: mapBottom + 14},
+            {
+              left: metrics.pad,
+              right: metrics.pad + controlReserve,
+              bottom: mapBottom + 14,
+            },
           ]}>
           <Image
             source={selected.image}
@@ -265,9 +273,8 @@ export function MapScreen({onOpenLocation}: Props) {
             styles.stepControls,
             {
               left: metrics.pad,
-              right: metrics.pad,
-              bottom: mapBottom + 94,
             },
+            metrics.compact ? styles.stepControlsCompact : styles.stepControlsRegular,
           ]}>
           <Pressable onPress={() => stepLocation(-1)} style={styles.stepButton}>
             <Text style={styles.stepText}>‹</Text>
@@ -362,13 +369,12 @@ const styles = StyleSheet.create({
   },
   markerWrap: {
     alignItems: 'center',
-    height: 64,
+    height: 84,
     justifyContent: 'center',
-    width: 64,
+    width: 84,
   },
   markerWrapSelected: {
-    height: 76,
-    width: 76,
+    zIndex: 2,
   },
   markerPulse: {
     backgroundColor: 'rgba(0, 209, 255, 0.12)',
@@ -498,8 +504,14 @@ const styles = StyleSheet.create({
   stepControls: {
     alignItems: 'center',
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: 8,
     position: 'absolute',
+  },
+  stepControlsCompact: {
+    top: 72,
+  },
+  stepControlsRegular: {
+    top: 82,
   },
   stepButton: {
     alignItems: 'center',

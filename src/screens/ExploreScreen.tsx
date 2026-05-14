@@ -17,6 +17,7 @@ import {palette} from '../theme';
 
 type Props = {
   onOpenLocation: (id: string) => void;
+  onSeeAllLocations: () => void;
 };
 
 const tips = [
@@ -42,7 +43,7 @@ const tips = [
   },
 ];
 
-export function ExploreScreen({onOpenLocation}: Props) {
+export function ExploreScreen({onOpenLocation, onSeeAllLocations}: Props) {
   const metrics = useMetrics();
   const featured =
     locations.find(item => item.id === 'lake-inari') ?? locations[0];
@@ -102,7 +103,13 @@ export function ExploreScreen({onOpenLocation}: Props) {
 
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>More Destinations</Text>
-        <Text style={styles.seeAll}>See all</Text>
+        <Pressable
+          accessibilityRole="button"
+          hitSlop={10}
+          onPress={onSeeAllLocations}
+          style={styles.seeAllButton}>
+          <Text style={styles.seeAll}>See all</Text>
+        </Pressable>
       </View>
       <ScrollView
         horizontal
@@ -253,6 +260,11 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: 16,
     fontWeight: '900',
+  },
+  seeAllButton: {
+    minHeight: 32,
+    justifyContent: 'center',
+    paddingLeft: 12,
   },
   seeAll: {
     color: palette.cyan,
