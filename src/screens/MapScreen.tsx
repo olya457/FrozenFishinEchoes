@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Text,
   View,
+  type ViewStyle,
 } from 'react-native';
 import MapView, {Marker, type Region} from 'react-native-maps';
 import {Pill} from '../components/Pill';
@@ -86,16 +87,36 @@ export function MapScreen({onOpenLocation}: Props) {
   const metrics = useMetrics();
   const [selectedId, setSelectedId] = useState('lake-inari');
   const [region, setRegion] = useState<Region>(initialRegion);
-  const [expanded, setExpanded] = useState(metrics.height >= 760);
-  const sheetHeight = expanded ? (metrics.height < 760 ? 292 : 350) : 132;
+  const [iosPopupVisible, setIosPopupVisible] = useState(false);
+  const isIos = Platform.OS === 'ios';
+  const [expanded, setExpanded] = useState(
+    Platform.OS === 'android' && metrics.height >= 760,
+  );
+  let expandedSheetHeight = metrics.height < 760 ? 292 : 350;
+  if (isIos) {
+    expandedSheetHeight = metrics.height < 760 ? 260 : 310;
+  }
+  const sheetHeight = expanded ? expandedSheetHeight : 132;
+  const navOffset = navGap + navHeight;
+  const bottomSheetOffset = navOffset - 1;
+  const bottomOverlayHeight = sheetHeight + bottomSheetOffset;
   const controlReserve = controlColumnWidth + controlColumnGap;
+  const mapBottom = isIos ? navOffset : bottomOverlayHeight;
+  const selectedCardBottom = bottomOverlayHeight + 14;
+  const selectedCardRight = metrics.pad + controlReserve;
+  const sheetLayout: ViewStyle = {
+    bottom: bottomSheetOffset,
+    height: sheetHeight,
+    left: 0,
+    paddingHorizontal: metrics.pad,
+    right: 0,
+  };
   const selected =
     locations.find(item => item.id === selectedId) ?? locations[0];
   const orderedLocations = useMemo(
     () => [selected, ...locations.filter(item => item.id !== selected.id)],
     [selected],
   );
-  const mapBottom = sheetHeight + navGap + navHeight - 1;
 
   const fitAll = useCallback(() => {
     mapRef.current?.fitToCoordinates(
@@ -188,10 +209,21 @@ export function MapScreen({onOpenLocation}: Props) {
               <Marker
                 key={item.id}
                 coordinate={item.coordinate}
-                description={`${item.flag} ${item.country} • ${item.temperature}`}
-                onCalloutPress={() => onOpenLocation(item.id)}
-                onPress={() => setSelectedId(item.id)}
-                title={shortName(item.name)}>
+                description={
+                  isIos
+                    ? undefined
+                    : `${item.flag} ${item.country} • ${item.temperature}`
+                }
+                onCalloutPress={
+                  isIos ? undefined : () => onOpenLocation(item.id)
+                }
+                onPress={() => {
+                  setSelectedId(item.id);
+                  if (isIos) {
+                    setIosPopupVisible(true);
+                  }
+                }}
+                title={isIos ? undefined : shortName(item.name)}>
                 <View
                   style={[
                     styles.markerWrap,
@@ -217,34 +249,36 @@ export function MapScreen({onOpenLocation}: Props) {
         </MapView>
         <View pointerEvents="none" style={styles.mapTint} />
         <Text style={[styles.title, {left: metrics.pad}]}>Interactive Map</Text>
-        <View
-          style={[
-            styles.selectedCard,
-            {
-              left: metrics.pad,
-              right: metrics.pad + controlReserve,
-              bottom: mapBottom + 14,
-            },
-          ]}>
-          <Image
-            source={selected.image}
-            resizeMode="cover"
-            style={styles.cardThumb}
-          />
-          <View style={styles.cardCopy}>
-            <Text numberOfLines={1} style={styles.cardTitle}>
-              {shortName(selected.name)}
-            </Text>
-            <Text numberOfLines={1} style={styles.cardMeta}>
-              {selected.flag} {selected.country} · {selected.coordinates}
-            </Text>
+        {!isIos ? (
+          <View
+            style={[
+              styles.selectedCard,
+              {
+                left: metrics.pad,
+                right: selectedCardRight,
+                bottom: selectedCardBottom,
+              },
+            ]}>
+            <Image
+              source={selected.image}
+              resizeMode="cover"
+              style={styles.cardThumb}
+            />
+            <View style={styles.cardCopy}>
+              <Text numberOfLines={1} style={styles.cardTitle}>
+                {shortName(selected.name)}
+              </Text>
+              <Text numberOfLines={1} style={styles.cardMeta}>
+                {selected.flag} {selected.country} · {selected.coordinates}
+              </Text>
+            </View>
+            <Pressable
+              onPress={() => onOpenLocation(selected.id)}
+              style={styles.cardButton}>
+              <Text style={styles.cardButtonText}>›</Text>
+            </Pressable>
           </View>
-          <Pressable
-            onPress={() => onOpenLocation(selected.id)}
-            style={styles.cardButton}>
-            <Text style={styles.cardButtonText}>›</Text>
-          </Pressable>
-        </View>
+        ) : null}
         <View
           style={[
             styles.controls,
@@ -268,82 +302,125 @@ export function MapScreen({onOpenLocation}: Props) {
             <Text style={styles.controlText}>⌖</Text>
           </Pressable>
         </View>
-        <View
-          style={[
-            styles.stepControls,
-            {
-              left: metrics.pad,
-            },
-            metrics.compact ? styles.stepControlsCompact : styles.stepControlsRegular,
-          ]}>
-          <Pressable onPress={() => stepLocation(-1)} style={styles.stepButton}>
-            <Text style={styles.stepText}>‹</Text>
-          </Pressable>
-          <Pressable
-            onPress={() => setExpanded(value => !value)}
-            style={styles.listButton}>
-            <Text style={styles.listButtonText}>
-              {expanded ? 'Less' : 'List'}
-            </Text>
-          </Pressable>
-          <Pressable onPress={() => stepLocation(1)} style={styles.stepButton}>
-            <Text style={styles.stepText}>›</Text>
-          </Pressable>
-        </View>
-      </View>
-
-      <View
-        style={[
-          styles.sheet,
-          {
-            bottom: navGap + navHeight - 1,
-            height: sheetHeight,
-            paddingHorizontal: metrics.pad,
-          },
-        ]}>
-        <View style={styles.handle} />
-        <Text style={styles.sheetLabel}>Nearby Locations</Text>
-        <ScrollView showsVerticalScrollIndicator={false}>
-          {orderedLocations.map(item => {
-            const active = selectedId === item.id;
-
-            return (
+        {!isIos ? (
+          <View
+            style={[
+              styles.stepControls,
+              {
+                left: metrics.pad,
+              },
+              metrics.compact
+                ? styles.stepControlsCompact
+                : styles.stepControlsRegular,
+            ]}>
+            <Pressable onPress={() => stepLocation(-1)} style={styles.stepButton}>
+              <Text style={styles.stepText}>‹</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => setExpanded(value => !value)}
+              style={styles.listButton}>
+              <Text style={styles.listButtonText}>
+                {expanded ? 'Less' : 'List'}
+              </Text>
+            </Pressable>
+            <Pressable onPress={() => stepLocation(1)} style={styles.stepButton}>
+              <Text style={styles.stepText}>›</Text>
+            </Pressable>
+          </View>
+        ) : null}
+        {isIos && iosPopupVisible ? (
+          <View
+            pointerEvents="box-none"
+            style={[
+              styles.popupLayer,
+              {
+                paddingBottom: navOffset + 16,
+                paddingHorizontal: metrics.pad,
+              },
+            ]}>
+            <View
+              style={[
+                styles.locationPopup,
+                {
+                  maxWidth: Math.min(420, metrics.width - metrics.pad * 2),
+                },
+              ]}>
               <Pressable
-                key={item.id}
-                onPress={() => focusLocation(item)}
-                style={[
-                  styles.locationRow,
-                  active && styles.locationRowActive,
-                ]}>
-                <Image
-                  source={item.image}
-                  resizeMode="cover"
-                  style={styles.thumb}
-                />
-                <View style={styles.rowCopy}>
-                  <Text numberOfLines={1} style={styles.rowTitle}>
-                    {shortName(item.name)}
-                  </Text>
-                  <Text numberOfLines={1} style={styles.country}>
-                    {item.flag} {item.country}
-                  </Text>
-                  <Pill icon="🧊" style={styles.rowPill}>
-                    {item.thickness}
-                  </Pill>
-                </View>
-                <View style={styles.rowActions}>
-                  <Text style={styles.temp}>{item.temperature}</Text>
-                  <Pressable
-                    onPress={() => onOpenLocation(item.id)}
-                    style={styles.detailsButton}>
-                    <Text style={styles.detailsButtonText}>›</Text>
-                  </Pressable>
-                </View>
+                onPress={() => setIosPopupVisible(false)}
+                style={styles.popupClose}>
+                <Text style={styles.popupCloseText}>×</Text>
               </Pressable>
-            );
-          })}
-        </ScrollView>
+              <Image
+                source={selected.image}
+                resizeMode="cover"
+                style={styles.popupImage}
+              />
+              <Text numberOfLines={1} style={styles.popupTitle}>
+                {shortName(selected.name)}
+              </Text>
+              <Text numberOfLines={1} style={styles.popupMeta}>
+                {selected.flag} {selected.country} · {selected.coordinates}
+              </Text>
+              <View style={styles.popupFacts}>
+                <Pill icon="❄️">{selected.temperature}</Pill>
+                <Pill icon="🧊">{selected.thickness}</Pill>
+              </View>
+              <Pressable
+                onPress={() => onOpenLocation(selected.id)}
+                style={styles.popupButton}>
+                <Text style={styles.popupButtonText}>Details ›</Text>
+              </Pressable>
+            </View>
+          </View>
+        ) : null}
       </View>
+
+      {!isIos ? (
+        <View style={[styles.sheet, styles.sheetBottom, sheetLayout]}>
+          <View style={styles.handle} />
+          <Text style={styles.sheetLabel}>Nearby Locations</Text>
+          <ScrollView showsVerticalScrollIndicator={false}>
+            {orderedLocations.map(item => {
+              const active = selectedId === item.id;
+
+              return (
+                <Pressable
+                  key={item.id}
+                  onPress={() => focusLocation(item)}
+                  style={[
+                    styles.locationRow,
+                    active && styles.locationRowActive,
+                  ]}>
+                  <Image
+                    source={item.image}
+                    resizeMode="cover"
+                    style={styles.thumb}
+                  />
+                  <View style={styles.rowCopy}>
+                    <Text numberOfLines={1} style={styles.rowTitle}>
+                      {shortName(item.name)}
+                    </Text>
+                    <Text numberOfLines={1} style={styles.country}>
+                      {item.flag} {item.country}
+                    </Text>
+                    <Pill icon="🧊" style={styles.rowPill}>
+                      {item.thickness}
+                    </Pill>
+                  </View>
+                  <View style={styles.rowActions}>
+                    <Text style={styles.temp}>{item.temperature}</Text>
+                    <Pressable
+                      onPress={() => onOpenLocation(item.id)}
+                      style={styles.detailsButton}>
+                      <Text style={styles.detailsButtonText}>›</Text>
+                    </Pressable>
+                  </View>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </View>
+      ) : null}
     </ScreenFixed>
   );
 }
@@ -545,17 +622,93 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '900',
   },
+  popupLayer: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 4,
+  },
+  locationPopup: {
+    backgroundColor: 'rgba(2, 14, 32, 0.95)',
+    borderColor: palette.line,
+    borderRadius: 22,
+    borderWidth: 1,
+    padding: 14,
+    shadowColor: '#00c8ff',
+    shadowOffset: {width: 0, height: 12},
+    shadowOpacity: 0.22,
+    shadowRadius: 20,
+    width: '100%',
+  },
+  popupClose: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(2, 14, 32, 0.82)',
+    borderColor: palette.whiteLine,
+    borderRadius: 15,
+    borderWidth: 1,
+    height: 30,
+    justifyContent: 'center',
+    position: 'absolute',
+    right: 22,
+    top: 22,
+    width: 30,
+    zIndex: 2,
+  },
+  popupCloseText: {
+    color: palette.text,
+    fontSize: 20,
+    fontWeight: '900',
+    lineHeight: 22,
+  },
+  popupImage: {
+    borderRadius: 16,
+    height: 126,
+    width: '100%',
+  },
+  popupTitle: {
+    color: palette.text,
+    fontSize: 20,
+    fontWeight: '900',
+    marginTop: 14,
+  },
+  popupMeta: {
+    color: palette.muted,
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 6,
+  },
+  popupFacts: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 12,
+  },
+  popupButton: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 209, 255, 0.16)',
+    borderColor: palette.cyan,
+    borderRadius: 16,
+    borderWidth: 1,
+    height: 44,
+    justifyContent: 'center',
+    marginTop: 14,
+  },
+  popupButtonText: {
+    color: palette.cyan,
+    fontSize: 14,
+    fontWeight: '900',
+  },
   sheet: {
     backgroundColor: 'rgba(2, 14, 32, 0.96)',
     borderColor: palette.line,
-    borderTopLeftRadius: 26,
-    borderTopRightRadius: 26,
     borderWidth: 1,
-    left: 0,
     paddingBottom: 10,
     paddingTop: 14,
     position: 'absolute',
-    right: 0,
+  },
+  sheetBottom: {
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
   },
   handle: {
     alignSelf: 'center',
